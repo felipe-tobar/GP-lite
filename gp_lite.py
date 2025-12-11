@@ -128,46 +128,68 @@ class gp_lite:
 			print(f'mu ={self.mu}')
 			print(f'sigma_n ={self.sigma_n}')
 
-	def plot_samples(self, linestyle='-', v_axis_lims=None, figsize=(9,4)):
-		import matplotlib.pyplot as plt
-		import numpy as np
+	def plot_samples(
+        self, 
+        linestyle='-', 
+        v_axis_lims=None, 
+        figsize=(9,3), 
+        plot_mean=True, 
+        save_path=None
+    ):
+
+
+		# Colors
+		navy = "#000080"                 # solid navy
+		light_navy_alpha = 0.12          # for credible interval
 
 		# Determine vertical limits
 		if v_axis_lims is None:
-			v_axis_lims = np.max(np.abs(self.samples)) * 1.1  # add 10% margin
+			v_axis_lims = np.max(np.abs(self.samples)) * 1.1
 
-		# Prepare figure with specified aspect ratio
 		fig, ax = plt.subplots(figsize=figsize)
 
-		# Plot 95% error bars as a shaded area
+		# 95% intervals as light navy shading
 		error_bars = 2 * self.sigma
 		ax.fill_between(
-			self.time, 
-			-error_bars, error_bars, 
-			color='blue', alpha=0.15, 
+			self.time,
+			-error_bars,
+			error_bars,
+			color=navy,
+			alpha=light_navy_alpha,
 			label='95% confidence interval'
 		)
 
-		# Plot zero mean line
-		ax.plot(
-			self.time, 
-			np.zeros_like(self.time), 
-			color='black', alpha=0.7, 
-			linestyle='--', 
-			label='mean'
-		)
+		# Mean line (now solid navy, thicker)
+		if plot_mean:
+			ax.plot(
+				self.time,
+				np.zeros_like(self.time),
+				color=navy,
+				linewidth=2.2,
+				linestyle='-',
+				alpha=1,
+				label='mean'
+			)
 
-		# Plot the GP samples
+		# Plot GP samples — solid navy, thin
 		if self.samples.shape[1] == 1:
 			ax.plot(
-				self.time, self.samples, 
-				linestyle, color='red', alpha=0.9, 
+				self.time,
+				self.samples,
+				linestyle='-',
+				color=navy,
+				alpha=0.8,
+				linewidth=1.0,
 				label='sample'
 			)
 		else:
 			ax.plot(
-				self.time, self.samples, 
-				linestyle, alpha=0.8
+				self.time,
+				self.samples,
+				linestyle='-',
+				color=navy,
+				alpha=0.8,
+				linewidth=1.0
 			)
 
 		# Titles and labels
@@ -179,47 +201,58 @@ class gp_lite:
 		ax.set_xlim(self.time[0], self.time[-1])
 		ax.set_ylim(-v_axis_lims, v_axis_lims)
 
-		# Grid for better readability
+		# Grid
 		ax.grid(True, linestyle='--', alpha=0.4)
 
-		# Legend outside top-right
+		# Legend
 		ax.legend(loc='upper right', fontsize=10)
 
-		# Tight layout
 		plt.tight_layout()
+		if save_path is not None:
+			plt.savefig(save_path, format="pdf", bbox_inches="tight", dpi=300)
 		plt.show()
 
-
-	def plot_posterior(self, n_samples=0, v_axis_lims=None, figsize=(9,3)):
-		import matplotlib.pyplot as plt
-		import numpy as np
-
+	def plot_posterior(self, n_samples=0, v_axis_lims=None,  plot_mean=True, figsize=(9,3), title = 'Posterior',  save_path=None):
+		# Colors
+		navy = "#000080"                 # solid navy
+		light_navy_alpha = 0.12          # for credible interval
+		clay = (190/255, 22/255, 34/255) # if ever needed again
+  
+  
 		if v_axis_lims is None:
 			v_axis_lims = np.max(np.abs(self.samples)) * 1.1  # 10% margin
 
 		fig, ax = plt.subplots(figsize=figsize)
 
 		# Posterior mean
-		ax.plot(self.time, self.mean, color='blue', alpha=0.9, linewidth=2, label='posterior mean')
+  		# Mean line (now solid navy, thicker)
+		if plot_mean:
+			ax.plot(
+				self.time,
+				self.mean,
+				color=navy,
+				linewidth=2,
+				linestyle='-',
+				alpha=1,
+				label='posterior mean'
+			)
 
 		# Observed data points
-		ax.plot(self.x, self.y, '.r', markersize=8, label='data')
+		ax.plot(self.x, self.y, '.', color = clay, markersize=8, label='data')
 
 		# 95% confidence interval
 		error_bars = 2 * np.sqrt(np.diag(self.cov))
 		ax.fill_between(
 			self.time, self.mean - error_bars, self.mean + error_bars,
-			color='blue', alpha=0.15, label='95% confidence interval'
+			color=navy, alpha=light_navy_alpha, label='95% confidence interval'
 		)
 
 		# Optional posterior samples
 		if n_samples > 0:
-			self.compute_posterior(where=self.time)
+		#	self.compute_posterior(where=self.time)
 			self.sample(how_many=n_samples)
-			ax.plot(self.time, self.samples, alpha=0.7)
-
-		# Labels and title
-		ax.set_title('Posterior', fontsize=14, fontweight='bold')
+			ax.plot(self.time, self.samples, color=navy, alpha=0.8, linewidth=1.0)
+		ax.set_title(title, fontsize=14, fontweight='bold')
 		ax.set_xlabel('Time', fontsize=12)
 		ax.set_ylabel('Value', fontsize=12)
 
@@ -234,12 +267,14 @@ class gp_lite:
 		ax.legend(loc='upper right', fontsize=10, ncol=3)
 
 		plt.tight_layout()
+		if save_path is not None:
+			plt.savefig(save_path, format="pdf", bbox_inches="tight", dpi=300)
 		plt.show()
 
 
-	def plot_data(self, v_axis_lims=None, figsize=(9,3)):
-		import matplotlib.pyplot as plt
-		import numpy as np
+	def plot_data(self, v_axis_lims=None, figsize=(9,3),  save_path=None):
+		clay = (190/255, 22/255, 34/255) # if ever needed again
+
 
 		if v_axis_lims is None:
 			v_axis_lims = np.max(np.abs(self.samples)) * 1.1  # 10% margin
@@ -247,7 +282,7 @@ class gp_lite:
 		fig, ax = plt.subplots(figsize=figsize)
 
 		# Plot data points
-		ax.plot(self.x, self.y, '.r', markersize=8, label='data')
+		ax.plot(self.x, self.y, '.', color = clay, markersize=8, label='data')
 
 		# Labels and title
 		ax.set_title('Data', fontsize=14, fontweight='bold')
@@ -265,4 +300,6 @@ class gp_lite:
 		ax.legend(loc='upper right', fontsize=10)
 
 		plt.tight_layout()
+		if save_path is not None:
+			plt.savefig(save_path, format="pdf", bbox_inches="tight", dpi=300)
 		plt.show()
